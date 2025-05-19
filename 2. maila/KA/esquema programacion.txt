@@ -1,0 +1,241 @@
+************************************************************************************
+				ESTRUCTURA GENERAL
+************************************************************************************
+
+(ETIQUETAS)
+	
+	ESTADO EQU 0x20 --> siempre a partir de 0x20, las direcciones anteriores están reservadas
+	EVENTO EQU 0x21
+	...
+
+***********************************************************************************
+
+ORG 0x00
+
+	AJMP INICIO_PROGRAMA
+
+*************************************************************************************
+
+(INTERRUPCIONES)
+
+ORG 0x03 (INT0, botón puerto P3.2)
+
+	encender flag botón (solo si luego el botón hace falta para algo, si no se deja la interrupción vacía)
+	RETI
+
+ORG 0x0B (TIMER0)
+
+	PUSH ACC
+	PUSH PSW
+	MOV TH0, #algo
+	MOV TL0, #algo
+	INC CONT (normalmente se pide utilizar un contador, pero si no lo piden no hace falta)
+	SETB TICK_TIMER (encender flag timer)
+	POP PSW
+	POP ACC
+	RETI
+
+ORG 0x1B (TIMER1) 
+
+	(igual que TIMER0, pero usando TH1 y TL1)
+
+ORG 0x53 (ADC) --> entra cuando ADCI=1 (cuando termina la conversión del ADC)
+
+	SETB TICK_ADC (encender flag ADC)
+	ANL ADCON, #EFh (#11101111b --> para poner ADCI a 0)
+	RETI
+
+*************************************************************************************
+
+ORG 0x7B
+
+	INICIALIZACIONES:
+		MOV ESTADO, #0x00
+		MOV EVENTO, #0x00
+		...
+		MOV PWMP, #algo (se calcula con la formula)
+		MOV PWMx, #0xFF (inicializar el PWM apagado)
+		MOV THx,  #algo (valor inicial del timer x)
+		MOV TLx,  #algo (valor inicial del timer x)
+		MOV TMOD, #0x01 (seleccionar el modo de timer de 16 bits)
+		...
+		RET
+		
+
+	PROGRAMA_PRINCIPAL:
+		ACALL INICIALIZACIONES
+	BUCLE:
+		ACALL MAQUINA_ESTADOS
+		AJMP BUCLE
+
+***********************************************************************************
+
+	MAQUINA_ESTADOS:
+		MOV A, ESTADO
+		RL  A  (estado x2, porque la instrucción AJMP ocupa 2 bytes de memoria)
+		MOV DPTR, #TABLA_ESTADOS (guardar en DPTR dónde empieza la subrutina TABLA_ESTADOS)
+		JMP @A+DPTR (saltar a la línea 'A' de TABLA_ESTADOS)
+
+	TABLA_ESTADOS:
+		AJMP ESTADO_0
+		AJMP ESTADO_1
+		...
+
+***********************************************************************************
+
+	ESTADO_0:
+		ACALL GENERADOR_EVENTOS
+		MOV A, #EVENTO
+		RL  A
+		MOV DPTR, #TABLA_ACCIONES_0
+		JMP @A+DPTR
+
+	TABLA_ACCIONES_0:
+		AJMP ACCION_0
+		AJMP ACCION_1
+		...
+
+	GENERADOR_EVENTOS_0:
+		comprobar flags, sensores... (SOLO COMPROBAR, SI HAY QUE CAMBIAR ALGO EN LAS ACCIONES!!!)
+		RET
+
+************************************************************************************
+	
+	ACCION_0:
+		apagar flags
+		actualizar variables (ESTADO, ...)
+		RET
+
+	ACCION_1:
+		...
+
+END
+
+
+
+
+************************************************************************************
+					ADC
+************************************************************************************
+
+registro ADCON:	| ADC.1 | ADC.0 | ADEX | ADCI | ADCS | AADR2 | AADR1 | AADR0 |
+
+CONFIGURAR ADC:
+1) Poner ADEX a 0 para decir que se active por software (el modo hardware no lo usamos)
+	ANL ADCON, #0x20 (#00100000b)
+
+2) Elegir canal de lectura: AADR0, AADR1, AADR2 (ADC0, ADC1, ...  ADC7)
+	- ADC0  --> ANL ADCON, #0xF8 (#11111000b, poner los últimos 3 bits a 0 para elegir el canal 0)
+	- otros --> primero poner a 0 (como para elegir ADC0) y luego poner los 1
+		    ORL ADCON, #algo
+UTILIZAR ADC:
+2) Activar permisos de interrupciones:
+	SETB EAD (para activar las interrupciones del ADC)
+	SETB EA (para activar permisos de interrupción)
+
+3) Empezar conversión:
+	- Encender ADC en la acción que cambia al estado en el que se va a usar. Por ejemplo, si va a usarse el ADC en el estado 3, hay que encenderlo en la acción que cambia del estado 2 al 3 (donde se hace MOV ESTADO, #0x03).
+	ORL ADCON, #0x08 (#00001000b, poner el bit ADCS a 1 para iniciar la conversión)
+
+4) Apagar:
+	- Se apaga solo al acabar una conversión (salta la interrupción)
+	- En la rutina de la interrupción hay que poner a 0 el bit ADCI para poder hacer otra lectura
+	- Si no se va a volver a utilizar desactivar las interrupciones
+		CLR EAD (para desactivar las interrupciones de ADC)
+		CLR EA (para desactivar los permisos de interrupción, solo apagar si no se están utilizando más interrupciones (timer, int0...))
+
+************************************************************************************
+					PWM
+************************************************************************************
+
+EXPLICACIÓN GENERAL:
+	- El PWM tiene un contador interno, que cuenta de 00 a FF, y al llegar a FF se resetea y vuelve a empezar desde 0
+	- La velocidad a la que se incrementa ese contador se puede ajustar dando valores al registro PWMP
+	- PWMn establece el ciclo de trabajo.
+	- Cuando en el ciclo el valor del contador está por debajo del valor del registro PWMn, el motor (o el dispositivo que se conecte) estará apagado (en un grafico, pulso bajo).
+	- Cuando el valor del contador sea mayor que PWMn, el motor estará encendido (en un grafico, pulso alto)
+
+CONFIGURAR PWM:
+1) Dar valores a PWMP (00-FF)
+	- PWMP define la frecuencia de incremento del contador
+	- Es común para todos los canales (PWM0, PWM1) --> PREGUNTA DE EXAMEN
+	- Se inicializa al inicio del programa (inicializaciones):
+		MOV PWMP, #algo (se calcula con la fórmula)
+
+UTILIZAR PWM:
+2) Encender PWMn (n=0,1)
+	- Valor alto --> poco trabajo (el contador va a estar poco tiempo por encima de PWMn, por lo que el motor va a estar poco tiempo encendido)
+	- valor bajo --> mucho trabajo (el contador va a estar mucho tiempo por encima de PWMn, por lo que el motor va a estar mucho tiempo encendido)
+		MOV PWMn, #algo
+
+APAGAR PWM:
+3) Apagar PWM
+	- Dar a PWMn el valor más alto posible, así el contador nunca va a superar ese valor y nunca se va a encender el motor.
+		MOV PWMn, #0xFF
+
+************************************************************************************
+					TIMER
+************************************************************************************
+
+CONFIGURAR TIMER:
+1) Configurar timer (n=0,1)
+	- Inicializar THn y TLn
+		MOV THn, #algo
+		MOV TLn, #algo
+	- Elegir modo (normalmente 16 bits)
+		MOV TMOD, #algo
+
+ENCENDER TIMER
+2) Activar interrupciones (registro IEN0)
+	SETB ET0 (activar interrupciones de timer0)
+	SETB ET1 (activar interrupciones de timer1)
+	SETB EA (activar permisos de interupcion)
+
+3) Encender timers (registro TCON)
+	SETB TR0 (para que el timer 0 empiece a contar)
+	SETB TR1 (para que el timer 1 empiece a contar)
+
+APAGAR TIMERS
+4) Apagar timers
+	CLR TR0 (apagar timer0)
+	CLR TR1 (apagar timer1)
+
+5) Desactivar interrupciones
+	CLR ET0 (desactivar interrupciones de timer0)
+	CLR ET1 (desactivar interrupciones de timer1)
+	CLR EA (desactivar permisos de interrupción, solo si no se están usando más interrupciones)
+
+RUTINA DE INTERRUPCION:
+- VOLVER A INICIALIZAR THn Y TLn!!!!
+
+************************************************************************************
+					IDLE
+************************************************************************************
+
+1) Activar interrupciones para salir del modo IDLE (si se pide)
+	Por ejemplo, para salir usando el botón INT0:
+		MOV IEN0, #81h (o SETB EX0)
+		SETB EA (activar permisos de interrupciones)
+
+2) Activar modo IDLE
+	ORL PCON, #01h
+
+	- Cuando ocurra la interrupción a la que se le han dado permisos, el IDLE se desactiva solo y salta a la rutina de la interrupción
+
+3) Si no se necesitan, desactivar las interrupciones
+	MOV IEN0, #80h (o CLR EX0)
+	CLR EA (solo si no se están utilizando más interrupciones)
+
+4) Si en la rutina de interrupción se ha activado algún flag (o si no se necesitan) poner a 0 al acabar
+
+
+
+
+
+
+
+
+
+
+
+
