@@ -1,0 +1,58 @@
+1. Zeregina:
+
+2. Zeregina: Ezin dira mezuak bidali PC2k oraindik konfiguratu gabe dagoelako(gateway*, IP helbidea, eta azpisare maskara) 
+
+3. Zeregina:
+	- IP: Gailu batek sarean duen helbidea
+	- Azpi-sare maskara: Sareko IP helbideari aplikatzen zaion maskara, gailuak azpisare ezberdinetan banatzeko.
+	- Gateway: Gailu batek kanpoko konexioak izateko jarratitu beharreko bidea zeazten du (normalean routerraren IP helbidea)
+
+4. Zeregina:
+	ROUTER1:
+		- Interfazea: 
+		- IP helbidea: 192.168.254.1
+		- Azpi-sare maskara: 255.255.255.0
+		- Gateway: N/A
+	ROUTER2:
+		- Interfazea:
+		- IP helbidea: 172.16.1.1
+		- Azpi-sare maskara: 255.255.0.0
+		- Gateway: N/A
+	PC1:
+		- Interfazea: N/C
+		- IP helbidea: 172.16.1.120
+		- Azpi-sare maskara: 255.255.0.0
+		- Gateway: 172.16.1.1
+	PC2:
+		- Interfazea: N/C
+		- IP helbidea: 172.16.1.121
+		- Azpi-sare maskara: 255.255.0.0
+		- Gateway: 172.16.1.1
+	ZERBITZARIA:
+		- Interfazea: N/C
+		- IP helbidea: 192.168.254.54
+		- Azpi-sare maskara: 255.255.255.0
+		- Gateway: 192.168.254.1
+
+5. Zeregina: CAPTURA
+
+6. Zeregina: DIAGRAMA EGIN
+	Lehenengo, PC1-ek 08 motako mezua (echo request) bidaltzen dio PC2-ri, eta honek 00 motako mezua itzultzen dio (echo reply), konexioa gauzatu dela egiaztatzeko. Prozesua 4 aldiz errepikatzen da.
+	
+	t	PC1			SWITCH			PC2
+		 |------ICMP 08---------->|			 |
+		 |			  |-------ICMP 08------->|
+		 |			  |<-------ICMP 00-------|
+		 |<------ICMP 00----------|
+
+		..... x4
+
+7. Zeregina:
+	- Protokolo Zenbakiak bidali nahi den mezu mota adierazten du.
+
+
+
+
+
+
+* GATEWAY: Kanpoko konexioak egiteko erabiliko den bidea, normalean routerraren IP helbidea.

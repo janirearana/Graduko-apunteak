@@ -1,0 +1,282 @@
+2017 MAIATZA:
+1)	
+	IP: 10.107.45.255	-->	 10.107.00101101.11111111
+	MASKARA: 255.255.252.0	-->	255.255.11111100.00000000
+	SARE HELBIDEA: 10.107.44.0	 10.107.00101100.00000000
+	BROADCAST: 10.107.47.255	 10.107.00101111.11111111
+
+	1. ERAB: 10.107.44.1
+	AZK. ERABILGARRI: 10.107.47.254
+
+2)
+	IP: 192.168.7.0
+	MASKARA: 255.255.255.0
+
+	A lab: 111+2+1=114
+	B lab: 56+2+1=59
+	C lab: 31+2+1=34
+	TOTAL: 207<256=2^8 --> Helbide nahiko ditugu
+
+	A>B>C
+	
+	A)
+	114<128=2^7 --> 7 bit hostID
+	32-24-7=1 bit subnetID
+	2^1=2 azpisare
+
+	192.168.7.SHHHHHHH --> S=0,1
+	AZPISARE HELBIDEA: 192.168.7.0
+	MASKARA: 255.255.255.10000000 = 255.255.255.128
+	BROADCAST: 192.168.7.01111111 = 192.168.7.127
+
+	1. EK. HELBIDEA: 192.168.7.2
+	AZK. EK.HELBIDEA: 192.168.7.126
+	
+	B)
+	59<64=2^6 --> 6 bit hosID
+	32-25-6=1 bit subnetID
+	2^1=2 azpisare
+
+	192.168.7.1SHHHHHH
+	AZPISARE HELBIDEA: 192.168.7.10000000 = 192.268.7.128
+	MASKARA: 255.255.255.11000000 = 255.255.255.192
+	BROADCAST: 192.168.7.10111111 = 192.168.7.191
+
+	1. EK. HELBIDEA: 192.168.7.130
+	AZK. EK.HELBIDEA: 192.168.7.190
+
+	C)
+	34<64=2^6 --> 6 bit hostID
+	32-26-6=0	-->	Ez da bit gehiago gehitu behar azpisare berria osatzeko
+	2^0=1 azpisare
+	
+	192.168.7.11HHHHHH
+	AZÌSARE HELBIDE: 192.168.7.192
+	MASKARA: 255.255.255.192
+	BROADCAST: 192.168.7.11111111 = 192.168.7.255
+
+	1. EK. HELBIDEA: 192.168.7.194
+	AZK. EK.HELBIDEA: 192.168.7.254
+
+
+3)
+	BIDERATZE TAULA 172.192.7.5 EKIPOA:
+	DEST		| GATEWAY	| GENMASK	  | IFACE
+	192.168.7.0	| 0.0.0.0	| 255.255.255.128 | eth0	(A)
+	0.0.0.0		| 192.168.7.128	| 0.0.0.0	  | eth0	(INTERNET)
+
+	R1-REN BIDERATZE TAULA:
+	DEST		| GATEWAY	| GENMASK	  | IFACE
+	0.0.0.0		| 158.277.70.1	| 255.255.255.0	  | eth3	(INTERNET)
+	192.168.7.0	| 0.0.0.0	| 255.255.255.128 | eth0	(A)
+	192.168.7.128	| 0.0.0.0	| 255.255.255.192 | eth1	(B)
+	192.168.7.192	| 0.0.0.0	| 255.255.255.192 | eth2	(C)
+	158.277.70.1	| 0.0.0.0	| 255.255.255.0	  | eth3	(R2)
+
+
+4)
+	a) Sare berean daudenez paketea zuzenean heltzen da
+		IPj: 192.168.7.5
+		IPh: 192.168.7.7
+	b) Sare berean daudenez paketea zuzenean bidaltzen da
+		IPj: 192.168.7.7
+		IPh: 192.168.7.1
+	c) 1. saltoa (ekipotik routerrera):
+		IPj: 192.168.7.6	(eth0)
+		IPh: 192.168.7.1	(eth0)
+	  2. saltoa (routerretik ekipora):
+		IPj: 192.168.7.1	(eth2)
+		IPh: 192.168.7.214	(eth0)
+
+
+6)
+	(ISN=0)						(ISN=0)
+		| SYN(seq=0,len=0)			|
+		|-------------------------------------->|
+		|					|
+		| SYN,ACK(seq=0, ack=1)			|
+		|<--------------------------------------|
+		|					|
+		| ACK(seq=1,ack=1)			|
+		|-------------------------------------->|
+		|					|
+		| PSH,ACK(seq=1, ack=1, len=194)	|
+		|-------------------------------------->|
+		|					|
+		| PSH,ACK(seq=1, ack_195, len=118)	|
+		|<--------------------------------------|
+		|					|
+		| ACK(seq=195,ack=119)			|
+		|-------------------------------------->|
+		|					|
+		| FIN,ACK(seq=119,ack=195)		|
+		|<--------------------------------------|
+		|					|
+		| ACK(seq=195,ack=120)			|
+		|-------------------------------------->|
+		|					|
+		| FIN,ACK(seq=195,ack=120)		|
+		|-------------------------------------->|
+		|					|
+		| ACK(seq=120, ack=196)			|
+		|<--------------------------------------|
+
+
+8)
+	0000 10 0b a9 f2 d2 5c ac 9e 17 7f 70 88 08 00 || 45 00 .....\....p...E.
+	0010 00 34 00 00 40 00 38 06 e6 c1 02 11 98 29 c0 a8 .4..@.8......)..
+	0020 01 20 || 01 bb c6 39 78 f2 dd b5 de 95 c8 c0 80 12 . ...9x.........
+	0030 72 10 da fc 00 00 02 04 05 b4 01 01 04 02 01 03 r...............
+	0040 03 05
+
+	a) 
+
+
+
+
+
+
+MAIATZA 2019
+1)
+	255.255.255.11110000 = 240
+	32-24-4=4 bit libre
+	2^4=16 azpisare guztira --> 6 gehiago egin daitezke
+
+	12 azpisare --> 8 helbide
+
+	3 azpisare --> 32 helbide
+
+
+2)
+	Ekoizpen: 220+2=222
+	Biltegia: 60+2=62
+	Administrazioa: 29+2=31
+	Merkataritza: 62+2=64
+	Informatika: 42+2=44
+	Zuzendaritza: 16+2=18
+
+	TOTALA: 441<512=2^9
+	
+	Tamainaren arabera ordenatu: Ekoizpen>Merkataritza>Biltegia>Informatuka>Administrazioa>Zuzendaritza
+
+	Ekoipena:
+	222<256=2^8 --> 8 bit hostID
+	32-23-8=1 bit subnetId
+	2^1=2 azpisare
+
+	10.5.0111111S.HHHHHHHH
+	
+	Sare helbide: 10.5.126.0
+	Maskara: 255.255.255.0
+	Broadcast: 10.5.126.255
+
+	1. ek: 10.5.126.2
+	Azk.ek: 10.5.126.220 (erabiliko dugun azkena, baina erabilgarri dagoen azkena .254 da)
+
+
+	Merkataritza:
+	64=2^6 --> 6 bit hostID
+	32-24-6=2 bit subnetID
+	2^2=4 azpisare
+
+	10.5.127.SSHHHHHH
+
+	SARE HELBIDEA: 10.5.127.0
+	MASKARA: 255.255.255.192
+	BROADCAST: 10.5.127.63
+
+	1. EK: 10.5.127.2
+	AZK. EK: 10.5.127.62
+
+
+	Biltegia:
+	62<64=2^6 --> 6 bit hostID
+	32-26-6=0 --> Ez da bit gehiago jarri behar azpisarea definitzeko
+	
+	10.5.127.01HHHHHH
+
+	SARE HELBIDEA: 10.5.127.64
+	MASKARA: 255.255.255.192
+	BROADCAST: 10.5.127.127
+
+	1. EK: 10.5.127.66
+	AZK. EK: 10.5.127.124 - 126
+
+
+	InformatIka:
+	44<64=2^6 --> 6 bit hostID
+	32-26-6=0 --> Ez da bit gehiago jarri behar azpisarea definitzeko
+
+	10.5.127.10HHHHHH
+
+	SARE HELBIDEA: 10.5.127.128
+	MASKARA: 255.255.255.192
+	BROADCAST: 10.5.127.191
+
+	1. EK: 10.5.127.130
+	AZK. EK: 10.5.127.170-190
+
+
+	Administrazioa:
+	31<32=2^5 --> 5 bit hostID
+	32-26-5=1 bit subnetID
+	2^1=2 azpisare
+
+	10.5.127.11SHHHHH
+	
+	SARE HELBIDEA: 10.5.127.192
+	MASKARA: 255.255.255.224
+	BROADCAST: 10.5.127.223
+
+	1. EK: 10.5.127.194
+	AZK. EK: 10.5.127.221
+
+
+	Zuzendaritza:
+	18<32=2^5 --> 5 bit hostID
+	32.27-5=0 --> Ez da bit gehiago jarri behar azpisarea definitzeko
+
+	10.5.127.111HHHHH
+
+	SARE HELBIDEA: 10.5.127.224
+	MASKARA: 255.255.255.224
+	BROADCAST: 10.5.127.255
+
+	1. EK: 10.5.127.226
+	AZK. EK: 10.5.127.240
+	
+	
+
+
+
+
+
+
+
+
+4)
+	R1)
+			|SAREA		|MASKARA		|PASABIDEA	|INTERFAZEA	|
+	EKOIZPEN	|10.5.126.0	|255.255.255.0		|0.0.0.0	|eth1
+	BILTEGIA	|10.5.127.0	|255.255.255.192	|0.0.0.0	|eth0
+	MERKATARITZA	|10.5.127.64	|255.255.255.192	|10.0.0.2	|serial0
+	ZUZENDARITZA	|10.5.127.224	|255.255.255.
+	INTERNET	|0.0.0.0	|0.0.0.0		|10.0.0.2	|serial0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

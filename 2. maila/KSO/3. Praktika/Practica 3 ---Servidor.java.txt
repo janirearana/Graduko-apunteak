@@ -1,0 +1,155 @@
+package sockets;
+
+import java.io.*;
+import java.net.*;
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+/**
+ * SERVIDOR
+ *
+ */
+public class Servidor extends JFrame {
+
+	private static final long serialVersionUID = 1L;
+	private JTextField campoIntroducir;
+	private JTextArea areaPantalla;
+	private ObjectOutputStream salida;
+	private ObjectInputStream entrada;
+	private ServerSocket servidor;
+	private Socket conexion;
+	private int contador = 1;
+
+	// GUI-Constructor de Servidor
+
+	public Servidor() { 
+		super("Servidor");
+		Container contenedor = getContentPane();
+
+		campoIntroducir = new JTextField();
+		campoIntroducir.setEditable(false);
+		campoIntroducir.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent evento) {
+				enviarDatos(evento.getActionCommand());
+				campoIntroducir.setText("");
+			}
+		});
+		contenedor.add(campoIntroducir, BorderLayout.NORTH);
+		areaPantalla = new JTextArea();
+		contenedor.add(new JScrollPane(areaPantalla), BorderLayout.CENTER);
+		setSize(300, 150);
+		setVisible(true);
+	}
+
+	// Metodo configurar y ejecutar el servidor
+	public void ejecutarServidor() {
+		try {
+			// Paso 1 -Crear un objeto ServerSocket. Puerto = 12345
+			servidor = new ServerSocket(12345, 100);
+			while (true) {
+				try {
+					esperarConexion(); 	// Paso 2 - Esperar una conexión.
+					obtenerFlujos();	// Paso 3 - Obtener flujos de entrada y salida.
+					procesarConexion(); // Paso 4 - Procesar la conexión.
+				}
+				
+				catch (EOFException excepcionEOF) {
+					System.err.println("El servidor terminó la conexión");
+				} finally {
+					cerrarConexion(); 	// Paso 5 - Cerrar la conexión.
+					++contador;
+				}
+			} 
+		} 
+		catch (IOException excepcionES) {
+			excepcionES.printStackTrace();
+		}
+	} 
+
+	// Metodo esperar conexión, y mostrar información de la conexión
+	private void esperarConexion() throws IOException {
+		mostrarMensaje("Esperando una conexión\n");
+		conexion = servidor.accept(); // permitir al servidor aceptar la conexión
+		mostrarMensaje("Conexión " + contador + " recibida de:  " + conexion.getInetAddress().getHostName());
+	}
+
+	// Metodo para obtener flujos para enviar y recibir datos
+	private void obtenerFlujos() throws IOException {
+		salida = new ObjectOutputStream(conexion.getOutputStream());
+		salida.flush(); // Vaciar búfer
+		
+		entrada = new ObjectInputStream(conexion.getInputStream());
+		mostrarMensaje("\nSe recibieron los flujos de E/S\n");
+	}
+
+	// Metodo para procesar la conexión con el cliente
+	private void procesarConexion() throws IOException {
+	   	String mensaje = "Conexión exitosa";
+		enviarDatos(mensaje);
+		establecerCampoTextoEditable(true);
+		do { 
+			try {
+				mensaje = (String) entrada.readObject();
+				mostrarMensaje("\n" + mensaje);
+			}
+			catch (ClassNotFoundException excepcionClaseNoEncontrada) {
+				mostrarMensaje("\nSe recibió un tipo de objeto desconocido");
+			}
+		} while (!mensaje.equals("CLIENTE>>> TERMINAR"));
+	} 
+
+	// Metodo cerrar conexion: flujos y socket
+	private void cerrarConexion() {
+		mostrarMensaje("\nFinalizando la conexión\n");
+		establecerCampoTextoEditable(false); 
+		try {
+			salida.close();
+			entrada.close();
+			conexion.close();
+		} catch (IOException excepcionES) {
+			excepcionES.printStackTrace();
+		}
+	}
+
+	// Metodo enviar mensaje al cliente
+	private void enviarDatos(String mensaje) {
+		try {
+			salida.writeObject("SERVIDOR>>> " + mensaje);
+			salida.flush();
+			mostrarMensaje("\nSERVIDOR>>> " + mensaje);
+		}
+		catch (IOException excepcionES) {
+			areaPantalla.append("\nError al escribir objeto");
+		}
+	}
+
+	// Metodo para mostrar mensaje en areaPantalla
+	private void mostrarMensaje(final String mensajeAMostrar) {
+		SwingUtilities.invokeLater(new Runnable() { 
+			public void run()
+			{
+				areaPantalla.append(mensajeAMostrar);
+				areaPantalla.setCaretPosition(areaPantalla.getText().length());
+			}
+		} 
+		);
+	}
+
+	private void establecerCampoTextoEditable(final boolean editable) {
+		
+		SwingUtilities.invokeLater(new Runnable() { 
+			public void run() 
+			{
+				campoIntroducir.setEditable(editable);
+			}
+		} 
+		);
+	}
+
+	public static void main(String args[]) {
+		Servidor aplicacion = new Servidor();
+		aplicacion.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		aplicacion.ejecutarServidor();
+	}
+}
