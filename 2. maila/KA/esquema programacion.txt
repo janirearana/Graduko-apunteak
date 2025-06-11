@@ -122,7 +122,7 @@ registro ADCON:	| ADC.1 | ADC.0 | ADEX | ADCI | ADCS | AADR2 | AADR1 | AADR0 |
 
 CONFIGURAR ADC:
 1) Poner ADEX a 0 para decir que se active por software (el modo hardware no lo usamos)
-	ANL ADCON, #0x20 (#00100000b)
+	ANL ADCON, #0xDF (#11011111b)
 
 2) Elegir canal de lectura: AADR0, AADR1, AADR2 (ADC0, ADC1, ...  ADC7)
 	- ADC0  --> ANL ADCON, #0xF8 (#11111000b, poner los últimos 3 bits a 0 para elegir el canal 0)
