@@ -214,19 +214,20 @@ RUTINA DE INTERRUPCION:
 
 1) Activar interrupciones para salir del modo IDLE (si se pide)
 	Por ejemplo, para salir usando el botón INT0:
-		MOV IEN0, #81h (o SETB EX0)
+		MOV IEN0, #0x81 (o SETB EX0)
 		SETB EA (activar permisos de interrupciones)
 
 2) Activar modo IDLE
-	ORL PCON, #01h
+	ORL PCON, #0x01
 
 	- Cuando ocurra la interrupción a la que se le han dado permisos, el IDLE se desactiva solo y salta a la rutina de la interrupción
 
 3) Si no se necesitan, desactivar las interrupciones
-	MOV IEN0, #80h (o CLR EX0)
+	MOV IEN0, #0x80 (o CLR EX0)
 	CLR EA (solo si no se están utilizando más interrupciones)
 
 4) Si en la rutina de interrupción se ha activado algún flag (o si no se necesitan) poner a 0 al acabar
+
 
 
 
